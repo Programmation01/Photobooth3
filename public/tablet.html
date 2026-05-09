@@ -1,0 +1,1954 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <title>Photobooth — Bal 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+/* ════════════════════════════════════════════════════
+   RESET & VARIABLES
+════════════════════════════════════════════════════ */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+  --bg:          #080810;
+  --bg2:         #0f0f1c;
+  --bg3:         #161628;
+  --gold:        #d4a843;
+  --gold-light:  #f0c870;
+  --gold-dim:    rgba(212,168,67,0.15);
+  --gold-border: rgba(212,168,67,0.3);
+  --text:        #f5f0e8;
+  --text-dim:    #8a8098;
+  --white:       #ffffff;
+  --green:       #2dde98;
+  --red:         #ff4757;
+  --r-sm:        10px;
+  --r-md:        16px;
+  --r-lg:        24px;
+  --ff-serif:    'Cormorant Garamond', Georgia, serif;
+  --ff-sans:     'Outfit', 'Helvetica Neue', sans-serif;
+  --shadow:      0 20px 60px rgba(0,0,0,0.8);
+  --glow:        0 0 30px rgba(212,168,67,0.2);
+}
+
+html, body {
+  width:100%; height:100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ff-sans);
+  overflow: hidden;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ════════════════════════════════════════════════════
+   ÉCRANS (state machine)
+════════════════════════════════════════════════════ */
+.screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+  z-index: 10;
+}
+.screen.active { opacity: 1; pointer-events: all; }
+
+/* ════════════════════════════════════════════════════
+   ÉCRAN 1 — ACCUEIL
+════════════════════════════════════════════════════ */
+#screen-home {
+  background: radial-gradient(ellipse 80% 60% at 50% 40%, #1a1228 0%, var(--bg) 100%);
+  z-index: 20;
+  cursor: pointer;
+}
+.home-stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.home-star {
+  position: absolute;
+  width: 2px; height: 2px;
+  background: var(--gold-light);
+  border-radius: 50%;
+  animation: twinkle var(--d, 3s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+  opacity: 0;
+}
+@keyframes twinkle {
+  0%,100% { opacity: 0; transform: scale(1); }
+  50%      { opacity: 0.8; transform: scale(1.5); }
+}
+
+.home-logo {
+  font-family: var(--ff-serif);
+  font-size: clamp(52px, 10vw, 96px);
+  font-weight: 600;
+  letter-spacing: 8px;
+  color: var(--gold);
+  text-shadow: 0 0 60px rgba(212,168,67,0.5), 0 0 120px rgba(212,168,67,0.2);
+  animation: logoGlow 3s ease-in-out infinite;
+  line-height: 1;
+}
+@keyframes logoGlow {
+  0%,100% { text-shadow: 0 0 40px rgba(212,168,67,0.4), 0 0 80px rgba(212,168,67,0.2); }
+  50%     { text-shadow: 0 0 80px rgba(212,168,67,0.7), 0 0 160px rgba(212,168,67,0.3); }
+}
+.home-year {
+  font-family: var(--ff-serif);
+  font-size: clamp(18px, 4vw, 32px);
+  font-style: italic;
+  color: var(--gold-light);
+  letter-spacing: 4px;
+  margin-top: 8px;
+  opacity: 0.8;
+}
+.home-sub {
+  font-family: var(--ff-sans);
+  font-size: 14px;
+  color: var(--text-dim);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-top: 48px;
+}
+.home-tap {
+  margin-top: 60px;
+  font-size: 15px;
+  color: var(--gold);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  animation: blink 1.8s ease-in-out infinite;
+}
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.home-divider {
+  width: 120px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  margin: 20px auto;
+}
+
+/* ════════════════════════════════════════════════════
+   ÉCRAN 2 — ATTENTE TÉLÉPHONE
+════════════════════════════════════════════════════ */
+#screen-waiting { gap: 24px; text-align: center; }
+.waiting-icon { font-size: 64px; animation: bounce 1.5s ease-in-out infinite; }
+@keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-16px); } }
+.waiting-title { font-family: var(--ff-serif); font-size: 28px; color: var(--gold); }
+.waiting-url {
+  background: var(--bg3);
+  border: 1px solid var(--gold-border);
+  border-radius: var(--r-md);
+  padding: 16px 24px;
+  font-family: monospace;
+  font-size: 18px;
+  color: var(--gold-light);
+  letter-spacing: 1px;
+}
+.waiting-hint { color: var(--text-dim); font-size: 14px; }
+
+/* ════════════════════════════════════════════════════
+   ÉCRAN 3 — LIVE + CONTRÔLES
+════════════════════════════════════════════════════ */
+#screen-live {
+  flex-direction: row;
+  align-items: stretch;
+  padding: 0;
+  gap: 0;
+  background: var(--bg);
+}
+
+/* ── Prévisualisation vidéo ── */
+#preview-container {
+  flex: 1;
+  position: relative;
+  background: #000;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#preview-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* CORRECTIF : pas de distorsion */
+  display: block;
+}
+
+/* Filtres CSS sur la vidéo (prévisualisation en temps réel) */
+#preview-video.filter-bnw     { filter: grayscale(100%); }
+#preview-video.filter-sepia   { filter: sepia(100%); }
+#preview-video.filter-vintage { filter: sepia(50%) contrast(120%) brightness(85%) saturate(130%); }
+#preview-video.filter-glitter { filter: brightness(130%) saturate(200%) contrast(110%); }
+
+/* Overlay canvas (stickers + texte déplaçable) */
+#overlay-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* Overlay Bal 2026 fixe */
+#overlay-bal2026 {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(8,8,16,0.7) 0%, transparent 100%);
+  pointer-events: none;
+}
+#overlay-bal2026 span {
+  font-family: var(--ff-serif);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 6px;
+  color: var(--gold);
+  text-shadow: 0 2px 12px rgba(0,0,0,0.8);
+}
+
+/* Indicateur strip */
+#strip-indicator {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+#strip-indicator.visible { opacity: 1; }
+.strip-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.3);
+  border: 1px solid rgba(255,255,255,0.5);
+  transition: background 0.3s;
+}
+.strip-dot.done { background: var(--gold); border-color: var(--gold); }
+.strip-dot.active { background: var(--white); border-color: var(--white); animation: pulse 0.6s ease-in-out infinite; }
+
+/* ── Panneau latéral droit ── */
+#side-panel {
+  width: 300px;
+  min-width: 280px;
+  background: var(--bg2);
+  border-left: 1px solid var(--gold-border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.panel-section {
+  padding: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.panel-title {
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+/* ── Mode ── */
+.mode-btns { display: flex; gap: 8px; }
+.mode-btn {
+  flex: 1;
+  padding: 12px 8px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--gold-border);
+  background: transparent;
+  color: var(--text);
+  font-family: var(--ff-sans);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.mode-btn .mode-icon { font-size: 22px; }
+.mode-btn:hover { border-color: var(--gold); background: var(--gold-dim); }
+.mode-btn.active {
+  border-color: var(--gold);
+  background: var(--gold-dim);
+  color: var(--gold);
+}
+
+/* ── Filtres ── */
+.filter-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.filter-btn {
+  aspect-ratio: 1;
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 10px;
+  font-family: var(--ff-sans);
+  color: var(--text-dim);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.2s;
+  padding: 6px;
+  background: var(--bg3);
+}
+.filter-btn .filter-preview {
+  width: 36px; height: 36px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #8a7a6a, #d4b896);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.filter-btn:hover { border-color: var(--gold-border); color: var(--text); }
+.filter-btn.active { border-color: var(--gold); color: var(--gold); }
+
+/* Effets de preview filtre */
+.filter-preview.bnw     { filter: grayscale(100%); }
+.filter-preview.sepia   { filter: sepia(100%); }
+.filter-preview.vintage { filter: sepia(50%) contrast(120%) brightness(85%); }
+.filter-preview.glitter { filter: brightness(130%) saturate(200%); }
+
+/* ── Stickers ── */
+.sticker-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.sticker-btn {
+  width: 44px; height: 44px;
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  background: var(--bg3);
+  font-size: 24px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  line-height: 1;
+}
+.sticker-btn:hover, .sticker-btn:active {
+  border-color: var(--gold);
+  background: var(--gold-dim);
+  transform: scale(1.15);
+}
+
+/* ── Texte ── */
+.text-input-wrap { display: flex; gap: 8px; }
+#text-input {
+  flex: 1;
+  background: var(--bg3);
+  border: 1px solid var(--gold-border);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font-family: var(--ff-sans);
+  font-size: 14px;
+  padding: 10px 12px;
+  outline: none;
+}
+#text-input:focus { border-color: var(--gold); }
+#text-input::placeholder { color: var(--text-dim); }
+#add-text-btn {
+  background: var(--gold-dim);
+  border: 1px solid var(--gold-border);
+  border-radius: var(--r-sm);
+  color: var(--gold);
+  font-size: 20px;
+  width: 42px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+#add-text-btn:hover { background: rgba(212,168,67,0.25); }
+
+.text-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  align-items: center;
+}
+.text-controls label { font-size: 12px; color: var(--text-dim); }
+#text-color { width: 32px; height: 32px; border: none; border-radius: 6px; cursor: pointer; padding: 2px; background: none; }
+#text-size {
+  flex: 1;
+  accent-color: var(--gold);
+  cursor: pointer;
+}
+
+/* ── Clear overlay ── */
+#clear-overlay-btn {
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  border: 1px solid rgba(255,70,85,0.3);
+  border-radius: var(--r-sm);
+  color: #ff6b7a;
+  font-family: var(--ff-sans);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+#clear-overlay-btn:hover { background: rgba(255,70,85,0.1); border-color: var(--red); }
+
+/* ── Bouton déclencheur ── */
+#trigger-section {
+  padding: 20px 16px;
+  margin-top: auto;
+}
+#shoot-btn {
+  width: 100%;
+  padding: 20px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  border: none;
+  border-radius: var(--r-lg);
+  color: var(--bg);
+  font-family: var(--ff-serif);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  cursor: pointer;
+  box-shadow: 0 8px 32px rgba(212,168,67,0.4);
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+#shoot-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent, rgba(255,255,255,0.2), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.4s;
+}
+#shoot-btn:hover::after { transform: translateX(100%); }
+#shoot-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(212,168,67,0.5); }
+#shoot-btn:active { transform: translateY(0); }
+#shoot-btn:disabled {
+  background: #333;
+  color: #666;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.shoot-icon { font-size: 28px; margin-bottom: 4px; }
+
+/* Statut téléphone */
+#phone-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+  padding: 10px 16px;
+  background: var(--bg);
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.phone-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #555;
+  flex-shrink: 0;
+  transition: background 0.4s;
+}
+.phone-dot.ok { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.phone-dot.warn { background: var(--gold); box-shadow: 0 0 6px var(--gold); animation: pulse 1s infinite; }
+
+/* Bouton galerie */
+#gallery-toggle {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(8,8,16,0.8);
+  border: 1px solid var(--gold-border);
+  border-radius: 40px;
+  color: var(--gold);
+  font-family: var(--ff-sans);
+  font-size: 13px;
+  padding: 8px 16px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  z-index: 50;
+  transition: all 0.2s;
+}
+#gallery-toggle:hover { background: var(--gold-dim); }
+
+/* ════════════════════════════════════════════════════
+   ÉCRAN 4 — COMPTE À REBOURS
+════════════════════════════════════════════════════ */
+#screen-countdown {
+  /* Semi-transparent : la vidéo reste visible en dessous */
+  background: rgba(8,8,16,0.72);
+  backdrop-filter: blur(1px); /* léger flou, pas trop fort */
+  -webkit-backdrop-filter: blur(1px);
+  z-index: 50;
+}
+#countdown-number {
+  font-family: var(--ff-serif);
+  font-size: clamp(120px, 30vw, 240px);
+  font-weight: 600;
+  color: var(--gold);
+  text-shadow: 0 0 80px rgba(212,168,67,0.6);
+  line-height: 1;
+  animation-fill-mode: both;
+}
+#countdown-number.pop {
+  animation: countPop 1s ease-out forwards;
+}
+@keyframes countPop {
+  0%   { transform: scale(1.4); opacity: 0.5; }
+  20%  { transform: scale(1);   opacity: 1;   }
+  80%  { transform: scale(1);   opacity: 1;   }
+  100% { transform: scale(0.8); opacity: 0;   }
+}
+#countdown-label {
+  font-size: 16px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-top: 16px;
+}
+#countdown-strip-info {
+  margin-top: 24px;
+  font-size: 14px;
+  color: var(--gold-light);
+  display: flex;
+  gap: 8px;
+}
+.countdown-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  border: 1px solid var(--gold);
+  transition: background 0.3s;
+}
+.countdown-dot.filled { background: var(--gold); }
+
+/* Flash d'écran à la capture */
+#screen-flash {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 100;
+  transition: opacity 60ms;
+}
+#screen-flash.burst { opacity: 1; }
+
+/* ════════════════════════════════════════════════════
+   ÉCRAN 5 — RÉSULTAT
+════════════════════════════════════════════════════ */
+#screen-result {
+  background: var(--bg);
+  flex-direction: row;
+  padding: 0;
+  align-items: stretch;
+  z-index: 30;
+}
+#result-preview-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  padding: 32px;
+}
+#result-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow);
+}
+#result-panel {
+  width: 320px;
+  background: var(--bg2);
+  border-left: 1px solid var(--gold-border);
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+}
+.result-title {
+  font-family: var(--ff-serif);
+  font-size: 24px;
+  color: var(--gold);
+  font-weight: 600;
+}
+#result-qr {
+  width: 160px; height: 160px;
+  border-radius: var(--r-sm);
+  border: 2px solid var(--gold-border);
+  align-self: center;
+  background: #f5f0e8;
+}
+
+.email-wrap { display: flex; flex-direction: column; gap: 8px; }
+.email-wrap label { font-size: 12px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
+#email-input {
+  background: var(--bg3);
+  border: 1px solid var(--gold-border);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font-family: var(--ff-sans);
+  font-size: 15px;
+  padding: 12px 14px;
+  outline: none;
+  width: 100%;
+}
+#email-input:focus { border-color: var(--gold); }
+
+.result-actions { display: flex; flex-direction: column; gap: 10px; }
+
+.btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: var(--r-md);
+  border: none;
+  font-family: var(--ff-sans);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-gold {
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  color: var(--bg);
+}
+.btn-gold:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(212,168,67,0.4); }
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--gold-border);
+  color: var(--text);
+}
+.btn-outline:hover { border-color: var(--gold); background: var(--gold-dim); color: var(--gold); }
+.btn-back {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-dim);
+}
+.btn-back:hover { border-color: rgba(255,255,255,0.25); color: var(--text); }
+
+#email-status {
+  font-size: 12px;
+  text-align: center;
+  min-height: 18px;
+  transition: color 0.3s;
+}
+
+/* ════════════════════════════════════════════════════
+   ÉCRAN 6 — GALERIE
+════════════════════════════════════════════════════ */
+#screen-gallery {
+  background: var(--bg);
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: 0;
+  z-index: 25;
+  overflow: hidden;
+}
+#gallery-header {
+  width: 100%;
+  padding: 24px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--gold-border);
+  flex-shrink: 0;
+  background: var(--bg2);
+}
+.gallery-title {
+  font-family: var(--ff-serif);
+  font-size: 26px;
+  color: var(--gold);
+}
+#gallery-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  align-content: start;
+}
+.gallery-item {
+  position: relative;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  border: 1px solid var(--gold-border);
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--bg3);
+  aspect-ratio: auto;
+}
+.gallery-item:hover { border-color: var(--gold); transform: translateY(-3px); box-shadow: var(--glow); }
+.gallery-item img { width: 100%; display: block; }
+.gallery-item-info {
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.gallery-badge {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 20px;
+  border: 1px solid var(--gold-border);
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.gallery-new { animation: galNew 0.6s ease-out; }
+@keyframes galNew {
+  0%   { transform: scale(0.85); opacity: 0; }
+  60%  { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+#gallery-empty {
+  grid-column: 1/-1;
+  text-align: center;
+  color: var(--text-dim);
+  padding: 60px;
+  font-size: 15px;
+}
+
+/* ════════════════════════════════════════════════════
+   MODAL DÉTAIL GALERIE
+════════════════════════════════════════════════════ */
+#modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.9);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  backdrop-filter: blur(10px);
+}
+#modal-overlay.open { opacity: 1; pointer-events: all; }
+#modal-content {
+  background: var(--bg2);
+  border: 1px solid var(--gold-border);
+  border-radius: var(--r-lg);
+  padding: 24px;
+  max-width: 800px;
+  width: 100%;
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  box-shadow: var(--shadow);
+}
+#modal-img { max-width: 400px; max-height: 70vh; object-fit: contain; border-radius: var(--r-sm); flex-shrink: 0; }
+#modal-info { flex: 1; display: flex; flex-direction: column; gap: 16px; }
+#modal-qr { width: 120px; height: 120px; background: #f5f0e8; border-radius: 8px; }
+#modal-close {
+  position: absolute;
+  top: 16px; right: 16px;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 32px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+/* ════════════════════════════════════════════════════
+   UTILS
+════════════════════════════════════════════════════ */
+@keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:0.4; } }
+.sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
+
+/* Scrollbar stylée */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--gold-border); border-radius: 2px; }
+
+/* Toast notifications */
+#toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--bg3);
+  border: 1px solid var(--gold-border);
+  border-radius: 40px;
+  color: var(--text);
+  font-size: 14px;
+  padding: 12px 24px;
+  z-index: 300;
+  transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  white-space: nowrap;
+  pointer-events: none;
+}
+#toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ── FLASH D'ÉCRAN ─────────────────────────────────────────── -->
+<div id="screen-flash"></div>
+
+<!-- ── TOAST ────────────────────────────────────────────────── -->
+<div id="toast"></div>
+
+<!-- ══════════════════════════════════════════════════════════
+     ÉCRAN 1 — ACCUEIL
+═════════════════════════════════════════════════════════════ -->
+<section id="screen-home" class="screen active">
+  <div class="home-stars" id="home-stars"></div>
+  <div class="home-logo">BAL</div>
+  <div class="home-year">Fin d'Année 2026</div>
+  <div class="home-divider"></div>
+  <div class="home-sub">Photobooth</div>
+  <div class="home-tap">✦ Toucher pour commencer ✦</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     ÉCRAN 2 — ATTENTE TÉLÉPHONE
+═════════════════════════════════════════════════════════════ -->
+<section id="screen-waiting" class="screen">
+  <div class="waiting-icon">📱</div>
+  <div class="waiting-title">Connectez le téléphone</div>
+  <p style="color:var(--text-dim);font-size:14px">Ouvrez cette adresse sur le téléphone :</p>
+  <div class="waiting-url" id="phone-url">—</div>
+  <div class="waiting-hint">Le téléphone fera office de caméra</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     ÉCRAN 3 — LIVE + CONTRÔLES
+═════════════════════════════════════════════════════════════ -->
+<section id="screen-live" class="screen">
+
+  <!-- Prévisualisation vidéo -->
+  <div id="preview-container">
+    <video id="preview-video" autoplay playsinline muted></video>
+    <canvas id="overlay-canvas"></canvas>
+
+    <div id="overlay-bal2026">
+      <span>✦ BAL 2026 ✦</span>
+    </div>
+
+    <div id="strip-indicator">
+      <div class="strip-dot" id="dot-0"></div>
+      <div class="strip-dot" id="dot-1"></div>
+      <div class="strip-dot" id="dot-2"></div>
+      <div class="strip-dot" id="dot-3"></div>
+    </div>
+
+    <button id="gallery-toggle">🖼 Galerie</button>
+  </div>
+
+  <!-- Panneau droit -->
+  <div id="side-panel">
+
+    <!-- Mode -->
+    <div class="panel-section">
+      <div class="panel-title">Mode</div>
+      <div class="mode-btns">
+        <button class="mode-btn active" id="mode-single" data-mode="single">
+          <span class="mode-icon">📷</span>
+          <span>1 Photo</span>
+        </button>
+        <button class="mode-btn" id="mode-strip" data-mode="strip">
+          <span class="mode-icon">🎞</span>
+          <span>Strip ×4</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="panel-section">
+      <div class="panel-title">Filtre</div>
+      <div class="filter-grid">
+        <button class="filter-btn active" data-filter="normal">
+          <div class="filter-preview">🌅</div>
+          <span>Normal</span>
+        </button>
+        <button class="filter-btn" data-filter="bnw">
+          <div class="filter-preview bnw">🌅</div>
+          <span>N&B</span>
+        </button>
+        <button class="filter-btn" data-filter="sepia">
+          <div class="filter-preview sepia">🌅</div>
+          <span>Sépia</span>
+        </button>
+        <button class="filter-btn" data-filter="vintage">
+          <div class="filter-preview vintage">🌅</div>
+          <span>Vintage</span>
+        </button>
+        <button class="filter-btn" data-filter="glitter">
+          <div class="filter-preview glitter">🌅</div>
+          <span>✨ Glitter</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Stickers -->
+    <div class="panel-section">
+      <div class="panel-title">Stickers</div>
+      <div class="sticker-grid" id="sticker-grid">
+        <button class="sticker-btn" data-emoji="⭐">⭐</button>
+        <button class="sticker-btn" data-emoji="🎉">🎉</button>
+        <button class="sticker-btn" data-emoji="🥂">🥂</button>
+        <button class="sticker-btn" data-emoji="💫">💫</button>
+        <button class="sticker-btn" data-emoji="🌟">🌟</button>
+        <button class="sticker-btn" data-emoji="👑">👑</button>
+        <button class="sticker-btn" data-emoji="🎭">🎭</button>
+        <button class="sticker-btn" data-emoji="💎">💎</button>
+        <button class="sticker-btn" data-emoji="🎊">🎊</button>
+        <button class="sticker-btn" data-emoji="🦋">🦋</button>
+        <button class="sticker-btn" data-emoji="🌙">🌙</button>
+        <button class="sticker-btn" data-emoji="✨">✨</button>
+      </div>
+    </div>
+
+    <!-- Texte déplaçable -->
+    <div class="panel-section">
+      <div class="panel-title">Texte libre</div>
+      <div class="text-input-wrap">
+        <input type="text" id="text-input" placeholder="Votre texte..." maxlength="40">
+        <button id="add-text-btn" title="Ajouter">＋</button>
+      </div>
+      <div class="text-controls">
+        <label>Couleur</label>
+        <input type="color" id="text-color" value="#f0c870">
+        <label>Taille</label>
+        <input type="range" id="text-size" min="14" max="60" value="28">
+      </div>
+    </div>
+
+    <!-- Clear -->
+    <div class="panel-section">
+      <button id="clear-overlay-btn">🗑 Effacer stickers & textes</button>
+    </div>
+
+    <!-- Bouton déclencher -->
+    <div id="trigger-section">
+      <button id="shoot-btn" disabled>
+        <div class="shoot-icon">📸</div>
+        Déclencher
+      </button>
+    </div>
+
+    <!-- Statut téléphone -->
+    <div id="phone-status">
+      <div class="phone-dot" id="status-dot"></div>
+      <span id="status-text">Téléphone non connecté</span>
+    </div>
+
+  </div><!-- /side-panel -->
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     ÉCRAN 4 — COMPTE À REBOURS
+═════════════════════════════════════════════════════════════ -->
+<section id="screen-countdown" class="screen">
+  <div id="countdown-number">3</div>
+  <div id="countdown-label">SOURIEZ !</div>
+  <div id="countdown-strip-info">
+    <div class="countdown-dot" id="cdot-0"></div>
+    <div class="countdown-dot" id="cdot-1"></div>
+    <div class="countdown-dot" id="cdot-2"></div>
+    <div class="countdown-dot" id="cdot-3"></div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     ÉCRAN 5 — RÉSULTAT
+═════════════════════════════════════════════════════════════ -->
+<section id="screen-result" class="screen">
+  <div id="result-preview-wrap">
+    <img id="result-img" src="" alt="Votre photo">
+  </div>
+  <div id="result-panel">
+    <div class="result-title">✨ Votre photo !</div>
+    <img id="result-qr" src="" alt="QR Code" title="Scannez pour télécharger">
+    <p style="font-size:12px;color:var(--text-dim);text-align:center">Scannez pour télécharger</p>
+
+    <div class="email-wrap">
+      <label>Recevoir par email</label>
+      <input type="email" id="email-input" placeholder="prenom@email.com">
+    </div>
+    <div id="email-status"></div>
+
+    <div class="result-actions">
+      <button class="btn btn-gold" id="send-email-btn">📧 Envoyer par email</button>
+      <button class="btn btn-outline" id="download-btn">⬇️ Télécharger</button>
+      <button class="btn btn-back" id="back-btn">← Nouvelle photo</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     ÉCRAN 6 — GALERIE
+═════════════════════════════════════════════════════════════ -->
+<section id="screen-gallery" class="screen">
+  <div id="gallery-header">
+    <div class="gallery-title">🖼 Galerie Bal 2026</div>
+    <button class="btn btn-back" id="gallery-close" style="width:auto;padding:10px 20px">✕ Fermer</button>
+  </div>
+  <div id="gallery-grid">
+    <div id="gallery-empty">Aucune photo pour l'instant</div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     MODAL GALERIE DÉTAIL
+═════════════════════════════════════════════════════════════ -->
+<div id="modal-overlay">
+  <div id="modal-content" style="position:relative">
+    <button id="modal-close">×</button>
+    <img id="modal-img" src="" alt="">
+    <div id="modal-info">
+      <div style="font-family:var(--ff-serif);font-size:20px;color:var(--gold)">Votre souvenir</div>
+      <img id="modal-qr" src="" alt="QR Code">
+      <p style="font-size:12px;color:var(--text-dim)">Scannez le QR code pour télécharger</p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+        <a id="modal-download" href="#" class="btn btn-gold" style="text-decoration:none">⬇️ Télécharger</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     JAVASCRIPT PRINCIPAL
+═════════════════════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ════════════════════════════════════════════════════
+//  ÉTAT GLOBAL
+// ════════════════════════════════════════════════════
+const state = {
+  screen:       'home',        // écran courant
+  mode:         'single',      // 'single' | 'strip'
+  filter:       'normal',      // filtre CSS courant
+  phoneOnline:  false,         // téléphone connecté et streamant
+  currentPhotoId: null,        // id de la dernière photo
+  currentDownloadUrl: null,
+  overlays:     [],            // [{type:'sticker'|'text', emoji, text, x, y, size, color, id}]
+  dragging:     null,          // overlay en cours de drag
+  stripFrames:  [],            // frames captées en mode strip
+};
+
+// ════════════════════════════════════════════════════
+//  REFS DOM
+// ════════════════════════════════════════════════════
+const $  = id => document.getElementById(id);
+const $$ = sel => document.querySelectorAll(sel);
+
+const screens = {
+  home:      $('screen-home'),
+  waiting:   $('screen-waiting'),
+  live:      $('screen-live'),
+  countdown: $('screen-countdown'),
+  result:    $('screen-result'),
+  gallery:   $('screen-gallery'),
+};
+
+const videoEl    = $('preview-video');
+const overlayCanvas = $('overlay-canvas');
+const overlayCtx = overlayCanvas.getContext('2d');
+const flashEl    = $('screen-flash');
+
+// ════════════════════════════════════════════════════
+//  NAVIGATION
+// ════════════════════════════════════════════════════
+function showScreen(name) {
+  Object.entries(screens).forEach(([k, el]) => {
+    // CORRECTIF APERÇU : pendant le compte à rebours, garder le live actif
+    // (le countdown est semi-transparent → on voit la vidéo en dessous)
+    if (k === 'live' && name === 'countdown') {
+      el.classList.add('active');
+    } else {
+      el.classList.toggle('active', k === name);
+    }
+  });
+  state.screen = name;
+}
+
+// ════════════════════════════════════════════════════
+//  WEBSOCKET + WEBRTC
+// ════════════════════════════════════════════════════
+const WS_URL = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`;
+let ws = null;
+let pc = null;
+
+function connectWS() {
+  ws = new WebSocket(WS_URL);
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ type: 'register', role: 'tablet' }));
+    console.log('[ws] Tablette connectée');
+  };
+
+  ws.onmessage = ({ data }) => {
+    let msg;
+    try { msg = JSON.parse(data); } catch { return; }
+    handleWSMessage(msg);
+  };
+
+  ws.onclose = () => {
+    console.log('[ws] Déconnecté, reconnexion...');
+    setTimeout(connectWS, 2500);
+  };
+
+  ws.onerror = e => console.error('[ws]', e);
+}
+
+function sendWS(obj) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
+}
+
+async function handleWSMessage(msg) {
+  switch (msg.type) {
+
+    case 'phone-connected':
+      state.phoneOnline = true;
+      updatePhoneStatus(true);
+      // Le téléphone va créer un offer WebRTC
+      break;
+
+    case 'phone-disconnected':
+      state.phoneOnline = false;
+      updatePhoneStatus(false);
+      if (pc) { try { pc.close(); } catch {} pc = null; }
+      break;
+
+    // WebRTC : recevoir l'offer du téléphone
+    case 'offer':
+      await handleRTCOffer(msg.sdp);
+      break;
+
+    // ICE candidates
+    case 'ice':
+      if (pc && msg.candidate) {
+        try { await pc.addIceCandidate(new RTCIceCandidate(msg.candidate)); } catch {}
+      }
+      break;
+
+    // Nouvelle photo disponible (uploadée par la tablette → confirmée par serveur)
+    case 'photo-ready':
+      addToGallery(msg);
+      break;
+
+    case 'photo-deleted':
+      removeFromGallery(msg.id);
+      break;
+
+    case 'pong': break;
+  }
+}
+
+// Créer le peer côté tablette (consommateur du flux vidéo)
+async function handleRTCOffer(sdp) {
+  if (pc) { try { pc.close(); } catch {} }
+
+  pc = new RTCPeerConnection({
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ]
+  });
+
+  // Recevoir le flux vidéo du téléphone
+  pc.ontrack = ({ streams }) => {
+    if (streams && streams[0]) {
+      videoEl.srcObject = streams[0];
+      state.phoneOnline = true;
+      updatePhoneStatus(true, 'Caméra en direct ✓');
+
+      // Passer à l'écran live si on était en attente
+      if (state.screen === 'waiting') {
+        setTimeout(() => showScreen('live'), 500);
+      }
+    }
+  };
+
+  pc.onicecandidate = ({ candidate }) => {
+    if (candidate) sendWS({ type: 'ice', candidate });
+  };
+
+  pc.oniceconnectionstatechange = () => {
+    console.log('[webrtc] ICE:', pc.iceConnectionState);
+    if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+      updatePhoneStatus(true, 'Caméra en direct ✓');
+    } else if (['disconnected','failed','closed'].includes(pc.iceConnectionState)) {
+      updatePhoneStatus(false);
+    }
+  };
+
+  await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  sendWS({ type: 'answer', sdp: pc.localDescription });
+  console.log('[webrtc] Answer envoyé');
+}
+
+// ════════════════════════════════════════════════════
+//  STATUT TÉLÉPHONE
+// ════════════════════════════════════════════════════
+function updatePhoneStatus(online, label) {
+  const dot  = $('status-dot');
+  const txt  = $('status-text');
+  const btn  = $('shoot-btn');
+  dot.className = 'phone-dot' + (online ? ' ok' : '');
+  txt.textContent = label || (online ? 'Téléphone connecté' : 'Téléphone non connecté');
+  btn.disabled = !online;
+
+  // Si on est sur waiting et que le téléphone se connecte → passer à live
+  if (online && state.screen === 'waiting') showScreen('live');
+  // Si téléphone déconnecté et sur live → retour waiting
+  if (!online && state.screen === 'live') showScreen('waiting');
+}
+
+// ════════════════════════════════════════════════════
+//  FILTRES
+// ════════════════════════════════════════════════════
+const FILTER_CSS = {
+  normal:  '',
+  bnw:     'grayscale(100%)',
+  sepia:   'sepia(100%)',
+  vintage: 'sepia(50%) contrast(120%) brightness(85%) saturate(130%)',
+  glitter: 'brightness(130%) saturate(200%) contrast(110%)'
+};
+
+$$('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    $$('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.filter = btn.dataset.filter;
+    // Appliquer le filtre CSS sur la vidéo en temps réel
+    videoEl.className = state.filter === 'normal' ? '' : `filter-${state.filter}`;
+  });
+});
+
+// ════════════════════════════════════════════════════
+//  MODE
+// ════════════════════════════════════════════════════
+$$('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    $$('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.mode = btn.dataset.mode;
+    // Afficher/masquer l'indicateur strip
+    $('strip-indicator').classList.toggle('visible', state.mode === 'strip');
+    resetStripDots();
+  });
+});
+
+// ════════════════════════════════════════════════════
+//  OVERLAY CANVAS — Stickers & Texte Déplaçable
+// ════════════════════════════════════════════════════
+
+function resizeOverlayCanvas() {
+  const container = $('preview-container');
+  overlayCanvas.width  = container.offsetWidth;
+  overlayCanvas.height = container.offsetHeight;
+  renderOverlays();
+}
+
+function renderOverlays() {
+  const w = overlayCanvas.width;
+  const h = overlayCanvas.height;
+  overlayCtx.clearRect(0, 0, w, h);
+
+  state.overlays.forEach(item => {
+    if (item.type === 'sticker') {
+      overlayCtx.font = `${item.size}px serif`;
+      overlayCtx.textBaseline = 'middle';
+      overlayCtx.textAlign = 'center';
+      overlayCtx.fillText(item.emoji, item.x, item.y);
+    } else if (item.type === 'text') {
+      overlayCtx.font = `bold ${item.size}px 'Cormorant Garamond', serif`;
+      overlayCtx.fillStyle = item.color;
+      overlayCtx.strokeStyle = 'rgba(0,0,0,0.6)';
+      overlayCtx.lineWidth = 3;
+      overlayCtx.textBaseline = 'middle';
+      overlayCtx.textAlign = 'center';
+      overlayCtx.strokeText(item.text, item.x, item.y);
+      overlayCtx.fillText(item.text, item.x, item.y);
+    }
+
+    // Indicateur de sélection si drag en cours
+    if (state.dragging === item) {
+      overlayCtx.strokeStyle = 'rgba(212,168,67,0.8)';
+      overlayCtx.lineWidth = 2;
+      overlayCtx.setLineDash([4, 3]);
+      overlayCtx.strokeRect(item.x - item.size/2 - 4, item.y - item.size/2 - 4, item.size + 8, item.size + 8);
+      overlayCtx.setLineDash([]);
+    }
+  });
+}
+
+// Hit test pour les overlays
+function hitTest(px, py) {
+  // Chercher de la fin (items du dessus en premier)
+  for (let i = state.overlays.length - 1; i >= 0; i--) {
+    const it = state.overlays[i];
+    const half = it.size / 2;
+    if (px >= it.x - half - 8 && px <= it.x + half + 8 &&
+        py >= it.y - half - 8 && py <= it.y + half + 8) {
+      return it;
+    }
+  }
+  return null;
+}
+
+function getPointerPos(e) {
+  const rect = overlayCanvas.getBoundingClientRect();
+  const src  = e.touches ? e.touches[0] : e;
+  return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+}
+
+overlayCanvas.addEventListener('pointerdown', e => {
+  const { x, y } = getPointerPos(e);
+  const hit = hitTest(x, y);
+  if (hit) {
+    state.dragging = hit;
+    overlayCanvas.setPointerCapture(e.pointerId);
+  }
+});
+
+overlayCanvas.addEventListener('pointermove', e => {
+  if (!state.dragging) return;
+  const { x, y } = getPointerPos(e);
+  state.dragging.x = x;
+  state.dragging.y = y;
+  renderOverlays();
+});
+
+overlayCanvas.addEventListener('pointerup', () => { state.dragging = null; renderOverlays(); });
+
+// Ajouter sticker depuis palette
+$$('.sticker-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const container = $('preview-container');
+    state.overlays.push({
+      type:  'sticker',
+      emoji: btn.dataset.emoji,
+      x:     container.offsetWidth  / 2 + (Math.random() - 0.5) * 80,
+      y:     container.offsetHeight / 2 + (Math.random() - 0.5) * 80,
+      size:  52,
+      id:    Date.now()
+    });
+    renderOverlays();
+    showToast(`${btn.dataset.emoji} Sticker ajouté — glissez pour repositionner`);
+  });
+});
+
+// Ajouter texte
+$('add-text-btn').addEventListener('click', () => {
+  const val = $('text-input').value.trim();
+  if (!val) return;
+  const container = $('preview-container');
+  state.overlays.push({
+    type:  'text',
+    text:  val,
+    x:     container.offsetWidth  / 2,
+    y:     container.offsetHeight * 0.8,
+    size:  parseInt($('text-size').value),
+    color: $('text-color').value,
+    id:    Date.now()
+  });
+  $('text-input').value = '';
+  renderOverlays();
+  showToast('Texte ajouté — glissez pour repositionner');
+});
+
+$('text-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('add-text-btn').click();
+});
+
+// Clear
+$('clear-overlay-btn').addEventListener('click', () => {
+  state.overlays = [];
+  renderOverlays();
+  showToast('Stickers et textes effacés');
+});
+
+// Observer le redimensionnement
+new ResizeObserver(resizeOverlayCanvas).observe($('preview-container'));
+
+// ════════════════════════════════════════════════════
+//  CAPTURE & COMPOSITION
+// ════════════════════════════════════════════════════
+
+// Capturer un frame depuis la vidéo + appliquer filtre + overlays
+function captureFrame(videoElement) {
+  // CORRECTIF DISTORSION : utiliser les dimensions intrinsèques de la vidéo
+  const vw = videoElement.videoWidth;
+  const vh = videoElement.videoHeight;
+  if (!vw || !vh) throw new Error('Vidéo non prête');
+
+  const canvas = document.createElement('canvas');
+  canvas.width  = vw;
+  canvas.height = vh;
+  const ctx = canvas.getContext('2d');
+
+  // 1. Appliquer le filtre CSS (même que la prévisualisation)
+  if (state.filter !== 'normal') {
+    ctx.filter = FILTER_CSS[state.filter] || '';
+  }
+  ctx.drawImage(videoElement, 0, 0, vw, vh);
+  ctx.filter = 'none';
+
+  // 2. Glitter effect : si filtre glitter, ajouter des particules dorées
+  if (state.filter === 'glitter') {
+    applyGlitterEffect(ctx, vw, vh);
+  }
+
+  return canvas;
+}
+
+function applyGlitterEffect(ctx, w, h) {
+  const count = 200;
+  for (let i = 0; i < count; i++) {
+    const x = Math.random() * w;
+    const y = Math.random() * h;
+    const r = Math.random() * 3 + 1;
+    const opacity = Math.random() * 0.7 + 0.3;
+    const hue = Math.random() * 40 + 40; // teintes or/jaune
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${hue}, 90%, 75%, ${opacity})`;
+    ctx.fill();
+  }
+}
+
+// Dessiner les overlays (stickers + textes) sur un canvas de composition
+// proportionnellement depuis le canvas HTML vers le canvas natif
+function drawOverlaysOnCanvas(ctx, targetW, targetH) {
+  const srcW = overlayCanvas.width;
+  const srcH = overlayCanvas.height;
+  if (!srcW || !srcH) return;
+
+  const scaleX = targetW / srcW;
+  const scaleY = targetH / srcH;
+
+  state.overlays.forEach(item => {
+    const x = item.x * scaleX;
+    const y = item.y * scaleY;
+    const size = item.size * Math.min(scaleX, scaleY) * 1.2;
+
+    if (item.type === 'sticker') {
+      ctx.font = `${size}px serif`;
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'center';
+      ctx.fillText(item.emoji, x, y);
+    } else if (item.type === 'text') {
+      ctx.font = `bold ${size}px 'Cormorant Garamond', serif`;
+      ctx.fillStyle = item.color;
+      ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+      ctx.lineWidth = size / 10;
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'center';
+      ctx.strokeText(item.text, x, y);
+      ctx.fillText(item.text, x, y);
+    }
+  });
+}
+
+// Dessiner l'overlay "Bal 2026" en bas du frame
+function drawBal2026Overlay(ctx, w, h) {
+  const pad = 16;
+  const textH = Math.max(32, h * 0.05);
+  ctx.fillStyle = 'rgba(8,8,16,0.55)';
+  ctx.fillRect(0, 0, w, textH + pad * 2);
+  ctx.font = `600 ${textH}px 'Cormorant Garamond', serif`;
+  ctx.fillStyle = '#d4a843';
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center';
+  ctx.fillText('✦  BAL 2026  ✦', w / 2, pad + textH / 2);
+}
+
+// Composer le strip 4 photos + frame
+function composeStrip(frames) {
+  const fw = frames[0].width;
+  const fh = frames[0].height;
+  const gap = Math.round(fh * 0.015);
+  const footerH = Math.round(fh * 0.12);
+  const padH = Math.round(fh * 0.025);
+  const padW = Math.round(fw * 0.04);
+
+  const totalW = fw + padW * 2;
+  const totalH = 4 * fh + 3 * gap + padH * 2 + footerH;
+
+  const strip = document.createElement('canvas');
+  strip.width  = totalW;
+  strip.height = totalH;
+  const ctx = strip.getContext('2d');
+
+  // Fond
+  const grad = ctx.createLinearGradient(0, 0, 0, totalH);
+  grad.addColorStop(0, '#080810');
+  grad.addColorStop(1, '#12121e');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, totalW, totalH);
+
+  // Bords dorés
+  ctx.strokeStyle = '#d4a843';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(2, 2, totalW - 4, totalH - 4);
+
+  // Placer les 4 frames
+  frames.forEach((frame, i) => {
+    const y = padH + i * (fh + gap);
+    ctx.drawImage(frame, padW, y);
+    // Numéro de photo
+    ctx.fillStyle = 'rgba(212,168,67,0.5)';
+    ctx.font = `${Math.round(fh * 0.04)}px monospace`;
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${i+1}/4`, padW + fw - 6, y + 6);
+  });
+
+  // Footer
+  const fy = totalH - footerH;
+  ctx.fillStyle = 'rgba(8,8,16,0.8)';
+  ctx.fillRect(0, fy, totalW, footerH);
+  // Ligne séparatrice
+  ctx.strokeStyle = 'rgba(212,168,67,0.4)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padW, fy + 1); ctx.lineTo(totalW - padW, fy + 1); ctx.stroke();
+  // Texte
+  ctx.fillStyle = '#d4a843';
+  ctx.font = `600 ${Math.round(footerH * 0.35)}px 'Cormorant Garamond', serif`;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center';
+  ctx.fillText('✦  BAL 2026  ✦', totalW / 2, fy + footerH * 0.4);
+  ctx.fillStyle = '#8a8098';
+  ctx.font = `${Math.round(footerH * 0.22)}px Outfit, sans-serif`;
+  ctx.fillText(new Date().toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' }), totalW / 2, fy + footerH * 0.72);
+
+  return strip;
+}
+
+// Composer photo unique
+function composeSingle(frame) {
+  const w = frame.width;
+  const h = frame.height;
+  const padH = Math.round(h * 0.025);
+  const padW = Math.round(w * 0.025);
+  const footerH = Math.round(h * 0.08);
+
+  const canvas = document.createElement('canvas');
+  canvas.width  = w + padW * 2;
+  canvas.height = h + padH * 2 + footerH;
+  const ctx = canvas.getContext('2d');
+
+  // Fond
+  const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  grad.addColorStop(0, '#080810');
+  grad.addColorStop(1, '#12121e');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Bord doré
+  ctx.strokeStyle = '#d4a843';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
+
+  // Frame
+  ctx.drawImage(frame, padW, padH);
+
+  // Footer
+  const fy = canvas.height - footerH;
+  ctx.fillStyle = '#d4a843';
+  ctx.font = `600 ${Math.round(footerH * 0.45)}px 'Cormorant Garamond', serif`;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center';
+  ctx.fillText('✦  BAL 2026  ✦', canvas.width / 2, fy + footerH * 0.45);
+  ctx.fillStyle = '#8a8098';
+  ctx.font = `${Math.round(footerH * 0.28)}px Outfit, sans-serif`;
+  ctx.fillText(new Date().toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' }), canvas.width / 2, fy + footerH * 0.8);
+
+  return canvas;
+}
+
+// ════════════════════════════════════════════════════
+//  SHOOT — DÉCLENCHEMENT
+// ════════════════════════════════════════════════════
+
+$('shoot-btn').addEventListener('click', () => {
+  if (state.mode === 'single') startCountdown(1);
+  else startCountdown(4);
+});
+
+async function startCountdown(totalShots) {
+  showScreen('countdown');
+  $('shoot-btn').disabled = true;
+  state.stripFrames = [];
+
+  // Afficher/masquer les dots strip
+  $$('.countdown-dot').forEach((d, i) => {
+    d.style.display = totalShots > 1 ? '' : 'none';
+    d.classList.remove('filled');
+  });
+
+  for (let shot = 0; shot < totalShots; shot++) {
+    // Mettre à jour l'info strip
+    if (totalShots > 1) {
+      $('countdown-label').textContent = `Photo ${shot+1} sur ${totalShots}`;
+      // Marquer les photos précédentes
+      for (let k = 0; k < shot; k++) {
+        document.getElementById(`cdot-${k}`).classList.add('filled');
+      }
+    } else {
+      $('countdown-label').textContent = 'SOURIEZ !';
+    }
+
+    // Compte à rebours 3-2-1
+    for (let n = 3; n >= 1; n--) {
+      await showCountdownNumber(n);
+    }
+
+    // Flash + capture
+    doFlash();
+    sendWS({ type: 'capture-trigger' }); // signaler au téléphone (flash)
+
+    try {
+      const frame = captureFrame(videoEl);
+      drawOverlaysOnCanvas(frame.getContext('2d'), frame.width, frame.height);
+      if (totalShots === 1) {
+        drawBal2026Overlay(frame.getContext('2d'), frame.width, frame.height);
+      }
+      state.stripFrames.push(frame);
+    } catch (e) {
+      console.error('[capture]', e);
+      showToast('⚠️ Erreur de capture — vérifiez la connexion');
+      showScreen('live');
+      $('shoot-btn').disabled = false;
+      return;
+    }
+
+    // Pause entre les photos du strip
+    if (shot < totalShots - 1) {
+      await delay(1200);
+    }
+  }
+
+  // Marquer la dernière dot
+  if (totalShots > 1) {
+    document.getElementById(`cdot-${totalShots-1}`)?.classList.add('filled');
+  }
+
+  // Composition finale
+  let finalCanvas;
+  if (totalShots === 1) {
+    finalCanvas = composeSingle(state.stripFrames[0]);
+  } else {
+    // Dessiner overlays sur chaque frame
+    state.stripFrames.forEach(f => {
+      drawBal2026Overlay(f.getContext('2d'), f.width, f.height);
+    });
+    finalCanvas = composeStrip(state.stripFrames);
+  }
+
+  await uploadAndShow(finalCanvas, totalShots > 1 ? 'strip' : 'single');
+  $('shoot-btn').disabled = false;
+}
+
+function showCountdownNumber(n) {
+  return new Promise(resolve => {
+    const el = $('countdown-number');
+    el.textContent = n;
+    el.classList.remove('pop');
+    void el.offsetWidth; // reflow
+    el.classList.add('pop');
+    setTimeout(resolve, 900);
+  });
+}
+
+// ════════════════════════════════════════════════════
+//  UPLOAD + AFFICHAGE RÉSULTAT
+// ════════════════════════════════════════════════════
+async function uploadAndShow(canvas, type) {
+  showToast('⏳ Envoi en cours...');
+
+  // CORRECTIF APERÇU : afficher immédiatement depuis le canvas local
+  // → pas de dépendance à l'URL serveur, zéro délai, toujours fonctionnel
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  $('result-img').src = dataUrl;
+  $('result-qr').src  = '';  // vide pendant l'upload
+
+  // Passer à l'écran résultat MAINTENANT (photo visible immédiatement)
+  showScreen('result');
+  $('download-btn').onclick = () => {
+    const a = document.createElement('a');
+    a.href     = dataUrl;
+    a.download = `Bal2026-${Date.now()}.jpg`;
+    a.click();
+  };
+
+  try {
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: dataUrl, type })
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error);
+
+    state.currentPhotoId     = json.id;
+    state.currentDownloadUrl = json.downloadUrl;
+
+    // Mettre à jour le QR code dès qu'on l'a
+    if (json.qrCode) $('result-qr').src = json.qrCode;
+
+    // Remplacer le download par le lien serveur (plus stable pour partage)
+    $('download-btn').onclick = () => window.open(json.downloadUrl, '_blank');
+
+    $('email-status').textContent = '';
+    $('email-input').value = '';
+
+  } catch (err) {
+    console.error('[upload]', err);
+    // L'aperçu est déjà affiché → juste un toast d'avertissement
+    showToast('⚠️ Sync serveur échouée — aperçu local disponible');
+    // Le bouton download fonctionne déjà avec le dataUrl local
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  FLASH TABLETTE
+// ════════════════════════════════════════════════════
+function doFlash() {
+  flashEl.classList.add('burst');
+  setTimeout(() => flashEl.classList.remove('burst'), 120);
+}
+
+// ════════════════════════════════════════════════════
+//  GALERIE
+// ════════════════════════════════════════════════════
+const galleryItems = new Map(); // id → element
+
+async function loadGallery() {
+  try {
+    const res = await fetch('/api/gallery');
+    const photos = await res.json();
+    photos.forEach(p => addToGallery(p, false));
+    if (photos.length > 0) $('gallery-empty').style.display = 'none';
+  } catch {}
+}
+
+function addToGallery(photo, animate = true) {
+  if (galleryItems.has(photo.id)) return;
+
+  $('gallery-empty').style.display = 'none';
+
+  const item = document.createElement('div');
+  item.className = 'gallery-item' + (animate ? ' gallery-new' : '');
+  item.dataset.id = photo.id;
+
+  const img = document.createElement('img');
+  img.src    = photo.url;
+  img.alt    = 'Photo Bal 2026';
+  img.loading = 'lazy';
+
+  const info = document.createElement('div');
+  info.className = 'gallery-item-info';
+  info.innerHTML = `
+    <span>${new Date(photo.createdAt).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</span>
+    <span class="gallery-badge">${photo.type === 'strip' ? '×4' : '1'}</span>
+  `;
+
+  item.appendChild(img);
+  item.appendChild(info);
+  item.addEventListener('click', () => openModal(photo));
+
+  // Insérer au début
+  const grid = $('gallery-grid');
+  grid.insertBefore(item, grid.firstChild);
+  galleryItems.set(photo.id, item);
+
+  // Toast si c'est une nouvelle photo temps réel (pas chargement initial)
+  if (animate) showToast('📸 Nouvelle photo dans la galerie !');
+}
+
+function removeFromGallery(id) {
+  const el = galleryItems.get(id);
+  if (el) { el.remove(); galleryItems.delete(id); }
+  if (galleryItems.size === 0) $('gallery-empty').style.display = '';
+}
+
+async function openModal(photo) {
+  $('modal-img').src     = photo.url;
+  $('modal-qr').src      = photo.qrCode || '';
+  $('modal-download').href = photo.downloadUrl;
+  $('modal-download').download = `Bal2026-${photo.id.slice(0,8)}.jpg`;
+
+  // Charger QR si absent
+  if (!photo.qrCode) {
+    try {
+      const r = await fetch(`/api/qr/${photo.id}`);
+      const d = await r.json();
+      $('modal-qr').src = d.qrCode;
+      photo.qrCode = d.qrCode; // cache
+    } catch {}
+  }
+
+  $('modal-overlay').classList.add('open');
+}
+
+$('modal-close').addEventListener('click', () => $('modal-overlay').classList.remove('open'));
+$('modal-overlay').addEventListener('click', e => {
+  if (e.target === $('modal-overlay')) $('modal-overlay').classList.remove('open');
+});
+
+// ════════════════════════════════════════════════════
+//  EMAIL
+// ════════════════════════════════════════════════════
+$('send-email-btn').addEventListener('click', async () => {
+  const to      = $('email-input').value.trim();
+  const photoId = state.currentPhotoId;
+
+  if (!to || !to.includes('@')) {
+    $('email-status').textContent = '⚠️ Email invalide';
+    $('email-status').style.color = 'var(--red)';
+    return;
+  }
+  if (!photoId) return;
+
+  $('send-email-btn').disabled = true;
+  $('email-status').textContent = '⏳ Envoi...';
+  $('email-status').style.color = 'var(--text-dim)';
+
+  try {
+    const res  = await fetch('/api/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, photoId })
+    });
+    const json = await res.json();
+
+    if (json.success) {
+      $('email-status').textContent = '✅ Email envoyé !';
+      $('email-status').style.color = 'var(--green)';
+    } else if (json.fallbackUrl) {
+      $('email-status').textContent = `⚠️ Email échoué — lien : ${json.fallbackUrl}`;
+      $('email-status').style.color = 'var(--gold)';
+    } else {
+      throw new Error(json.error);
+    }
+  } catch (err) {
+    $('email-status').textContent = '❌ Erreur : ' + err.message;
+    $('email-status').style.color = 'var(--red)';
+  } finally {
+    $('send-email-btn').disabled = false;
+  }
+});
+
+// ════════════════════════════════════════════════════
+//  NAVIGATION BOUTONS
+// ════════════════════════════════════════════════════
+$('screen-home').addEventListener('click', () => {
+  showScreen(state.phoneOnline ? 'live' : 'waiting');
+});
+
+$('back-btn').addEventListener('click', () => showScreen('live'));
+$('gallery-toggle').addEventListener('click', () => showScreen('gallery'));
+$('gallery-close').addEventListener('click', () => showScreen(state.screen === 'gallery' ? 'live' : state.screen));
+
+// ════════════════════════════════════════════════════
+//  URL TÉLÉPHONE
+// ════════════════════════════════════════════════════
+$('phone-url').textContent = `${location.origin}/phone`;
+
+// ════════════════════════════════════════════════════
+//  ÉTOILES D'ACCUEIL
+// ════════════════════════════════════════════════════
+function initStars() {
+  const container = $('home-stars');
+  for (let i = 0; i < 80; i++) {
+    const star = document.createElement('div');
+    star.className = 'home-star';
+    star.style.cssText = `
+      left: ${Math.random()*100}%;
+      top:  ${Math.random()*100}%;
+      --d:  ${2 + Math.random()*4}s;
+      --delay: ${Math.random()*5}s;
+      width:  ${1 + Math.random()*2}px;
+      height: ${1 + Math.random()*2}px;
+    `;
+    container.appendChild(star);
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  STRIP DOTS
+// ════════════════════════════════════════════════════
+function resetStripDots() {
+  [0,1,2,3].forEach(i => {
+    const d = $(`dot-${i}`);
+    d.className = 'strip-dot';
+  });
+}
+
+// ════════════════════════════════════════════════════
+//  TOAST
+// ════════════════════════════════════════════════════
+let toastTimer = null;
+function showToast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// ════════════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════════════
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Keepalive
+setInterval(() => sendWS({ type: 'ping' }), 25000);
+
+// ════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════
+(async () => {
+  initStars();
+  connectWS();
+  await loadGallery();
+})();
+</script>
+</body>
+</html>

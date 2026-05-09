@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <!-- user-scalable=no : empêche le zoom accidentel sur mobile -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Photobooth — Caméra</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #000;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    /* ── Vidéo ──────────────────────────────────────────── */
+    /* object-fit: contain → AUCUNE distorsion
+       On ne force pas de dimensions CSS → le navigateur respecte le ratio natif */
+    #video {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain; /* ← clé : contain, pas cover */
+      background: #000;
+      display: block;
+    }
+
+    /* ── Flash ──────────────────────────────────────────── */
+    #flash {
+      position: fixed;
+      inset: 0;
+      background: #fff;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 200;
+      transition: opacity 60ms ease-out;
+    }
+    #flash.burst { opacity: 1; }
+
+    /* ── Statut ─────────────────────────────────────────── */
+    #status {
+      position: fixed;
+      bottom: max(20px, env(safe-area-inset-bottom, 20px));
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(8, 8, 16, 0.85);
+      color: #d4a843;
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      padding: 8px 20px;
+      border-radius: 40px;
+      border: 1px solid rgba(212, 168, 67, 0.4);
+      backdrop-filter: blur(10px);
+      white-space: nowrap;
+      z-index: 100;
+      transition: opacity 0.4s;
+    }
+
+    /* ── Indicateur prêt ────────────────────────────────── */
+    #ready-dot {
+      position: fixed;
+      top: max(16px, env(safe-area-inset-top, 16px));
+      right: 16px;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: #333;
+      z-index: 100;
+      transition: background 0.4s;
+    }
+    #ready-dot.connected { background: #2dde98; box-shadow: 0 0 8px #2dde98; }
+    #ready-dot.streaming { background: #d4a843; box-shadow: 0 0 8px #d4a843; animation: pulse 1.2s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  </style>
+</head>
+<body>
+
+  <video id="video" autoplay playsinline muted></video>
+  <div id="flash"></div>
+  <div id="ready-dot"></div>
+  <div id="status">🔴 Initialisation...</div>
+
+  <script>
+  'use strict';
+
+  // ── Constantes ─────────────────────────────────────────────
+  const WS_URL     = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`;
+  const videoEl    = document.getElementById('video');
+  const statusEl   = document.getElementById('status');
+  const flashEl    = document.getElementById('flash');
+  const dotEl      = document.getElementById('ready-dot');
+
+  let ws  = null;
+  let pc  = null;
+  let localStream = null;
+  let reconnectTimer = null;
+
+  // ── Wake Lock (empêche l'écran de se verrouiller) ──────────
+  async function requestWakeLock() {
+    if (!navigator.wakeLock) return;
+    try {
+      await navigator.wakeLock.request('screen');
+    } catch (e) { /* Silencieux si refusé */ }
+  }
+
+  // ── Initialisation caméra ───────────────────────────────────
+  // CORRECTIF DISTORSION iPhone SE 2020 + iPhone 14 :
+  // 1. Utiliser "ideal" pas "exact" → le device choisit la résolution native
+  // 2. Pas d'aspectRatio forcé → on laisse le capteur décider
+  // 3. CSS object-fit: contain → pas de recadrage CSS qui déforme
+  async function initCamera() {
+    try {
+      setStatus('📷 Ouverture caméra...');
+
+      const constraints = {
+        audio: false,
+        video: {
+          facingMode: { ideal: 'environment' }, // Caméra arrière
+          width:     { ideal: 1920 },           // Demande 1080p sans forcer
+          height:    { ideal: 1080 },
+          frameRate: { ideal: 30, max: 60 }
+          // Pas d'aspectRatio : on laisse le capteur natif décider
+        }
+      };
+
+      localStream = await navigator.mediaDevices.getUserMedia(constraints);
+      videoEl.srcObject = localStream;
+
+      // Attendre les métadonnées pour connaître la résolution réelle
+      await new Promise((resolve, reject) => {
+        videoEl.onloadedmetadata = resolve;
+        videoEl.onerror = reject;
+        setTimeout(reject, 8000); // timeout 8s
+      });
+
+      const w = videoEl.videoWidth;
+      const h = videoEl.videoHeight;
+      setStatus(`✅ ${w}×${h}`);
+      console.log(`[camera] Résolution native : ${w}×${h}, ratio : ${(w/h).toFixed(3)}`);
+      return true;
+
+    } catch (err) {
+      console.error('[camera]', err);
+      if (err.name === 'NotAllowedError') {
+        setStatus('⛔ Autorisez la caméra dans Safari > Réglages');
+      } else if (err.name === 'NotFoundError') {
+        setStatus('❌ Aucune caméra détectée');
+      } else {
+        setStatus(`❌ Caméra : ${err.message}`);
+      }
+      return false;
+    }
+  }
+
+  // ── WebSocket (reconnexion automatique) ────────────────────
+  function connectWS() {
+    clearTimeout(reconnectTimer);
+    setStatus('🔄 Connexion serveur...');
+
+    ws = new WebSocket(WS_URL);
+
+    ws.onopen = async () => {
+      // 1. Enregistrement comme "phone"
+      send({ type: 'register', role: 'phone' });
+      dotEl.classList.add('connected');
+      setStatus('🟡 En attente tablette...');
+
+      // 2. Init caméra si pas encore fait
+      if (!localStream) {
+        const ok = await initCamera();
+        if (!ok) return;
+      }
+
+      requestWakeLock();
+
+      // 3. Créer le peer WebRTC et l'offer
+      await initWebRTC();
+    };
+
+    ws.onmessage = ({ data }) => {
+      let msg;
+      try { msg = JSON.parse(data); } catch { return; }
+      handleMessage(msg);
+    };
+
+    ws.onclose = () => {
+      dotEl.classList.remove('connected', 'streaming');
+      setStatus('🔴 Déconnecté — reconnexion...');
+      // Nettoyer le peer
+      if (pc) { try { pc.close(); } catch {} pc = null; }
+      reconnectTimer = setTimeout(connectWS, 2500);
+    };
+
+    ws.onerror = (e) => console.error('[ws]', e);
+  }
+
+  // ── Gestion messages serveur ────────────────────────────────
+  async function handleMessage(msg) {
+    switch (msg.type) {
+
+      // Tablette a répondu à notre offer WebRTC
+      case 'answer':
+        if (!pc) return;
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+          console.log('[webrtc] Answer reçu');
+        } catch (e) { console.error('[webrtc] Answer error', e); }
+        break;
+
+      // ICE candidate de la tablette
+      case 'ice':
+        if (!pc || !msg.candidate) return;
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
+        } catch (e) { console.error('[webrtc] ICE error', e); }
+        break;
+
+      // Serveur demande un nouvel offer (tablette reconnectée)
+      case 'request-offer':
+        if (pc) { try { pc.close(); } catch {} }
+        await initWebRTC();
+        break;
+
+      // La tablette déclenche un flash visuel sur le téléphone
+      case 'flash':
+        triggerFlash();
+        break;
+
+      case 'pong':
+        // Keepalive réponse
+        break;
+    }
+  }
+
+  // ── WebRTC : flux vidéo phone → tablette ───────────────────
+  async function initWebRTC() {
+    if (!localStream) { console.warn('[webrtc] Pas de stream'); return; }
+
+    pc = new RTCPeerConnection({
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+      ],
+      // Optimisation débit vidéo
+      iceTransportPolicy: 'all'
+    });
+
+    // Ajouter les tracks vidéo
+    localStream.getTracks().forEach(track => {
+      pc.addTrack(track, localStream);
+    });
+
+    // Envoyer les candidats ICE au serveur
+    pc.onicecandidate = ({ candidate }) => {
+      if (candidate) send({ type: 'ice', candidate });
+    };
+
+    // Suivi état connexion
+    pc.oniceconnectionstatechange = () => {
+      console.log(`[webrtc] ICE state: ${pc.iceConnectionState}`);
+      if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+        dotEl.className = 'streaming';
+        setStatus('🟢 En ligne — tablette connectée');
+        // Masquer le statut après 3s pour ne pas distraire
+        setTimeout(() => { statusEl.style.opacity = '0'; }, 3000);
+      } else if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+        dotEl.className = 'connected';
+        setStatus('🟡 Tablette déconnectée');
+        statusEl.style.opacity = '1';
+      }
+    };
+
+    // Créer et envoyer l'offer
+    const offer = await pc.createOffer({
+      offerToReceiveAudio: false,
+      offerToReceiveVideo: false
+    });
+    await pc.setLocalDescription(offer);
+    send({ type: 'offer', sdp: pc.localDescription });
+    console.log('[webrtc] Offer envoyé');
+  }
+
+  // ── Flash ───────────────────────────────────────────────────
+  function triggerFlash() {
+    flashEl.classList.add('burst');
+    setTimeout(() => flashEl.classList.remove('burst'), 120);
+  }
+
+  // ── Helpers ─────────────────────────────────────────────────
+  function send(obj) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(obj));
+    }
+  }
+
+  function setStatus(txt) {
+    statusEl.textContent = txt;
+    statusEl.style.opacity = '1';
+  }
+
+  // ── Keepalive WebSocket ─────────────────────────────────────
+  setInterval(() => send({ type: 'ping' }), 25000);
+
+  // ── Démarrage ───────────────────────────────────────────────
+  // Demander le wake lock au premier toucher (requis iOS)
+  document.addEventListener('touchstart', requestWakeLock, { once: true });
+  connectWS();
+  </script>
+</body>
+</html>
